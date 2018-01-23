@@ -1,0 +1,90 @@
+          简介
+
+
+
+        一键安装：选择一键安装linux64位即可
+
+        下载包路径：http://www.zentao.net/download/80059.html
+
+
+        一、安装
+        1、将安装包直接解压到/opt目录下
+          简介
+
+
+
+        一键安装：选择一键安装linux64位即可
+
+        下载包路径：http://www.zentao.net/download/80059.html
+
+
+        一、安装
+        1、将安装包直接解压到/opt目录下
+        可以使用命令： tar -zxvf  ZenTaoPMS.7.3.stable.zbox_32.tar.gz -C /opt
+        2、Apache和Mysql常用命令
+        执行/opt/zbox/zbox start 命令开启Apache和Mysql。
+        浏览器直接访问 http://禅道服务器ip:apache端口 即可访问和登录禅道。
+        其中 -ap参数 可以修改Apache的端口，-mp参数 可以修改Mysql的端口。（比如：/opt/zbox/zbox -ap 8080）
+          简介        >>>禅道项目管理系统
+        
+        简介
+        
+        禅道是第一款国产的优秀开源项目管理软件。先进的管理思想，合理的软件架构，简洁实效的操作，
+        优雅的代码实现，灵活的扩展机制，强大而易用的api调用机制、多语言支持、多风格支持、搜索功能、统计功能等，
+        利用禅道可以很好的进行项目的管理。
+
+
+        下载包路径：http://www.zentao.net/download/80059.html
+
+
+        一、安装
+        
+        1、将安装包直接解压到/opt目录下
+        特别说明：不要解压到别的目录再拷贝到/opt/，因为这样会导致文件的所有者和读写权限改变，也不要解压后把整个目录777权限。
+        可以使用命令： tar -zxvf  ZenTaoPMS.7.3.stable.zbox_32.tar.gz -C /opt
+        
+        2、Apache和Mysql常用命令
+        执行/opt/zbox/zbox start 命令开启Apache和Mysql。
+        执行/opt/zbox/zbox stop 命令停止Apache和Mysql。
+        执行/opt/zbox/zbox restart 命令重启Apache和Mysql。
+        
+        3、访问和登录禅道
+        启动Apache和Mysql服务后，
+        浏览器直接访问 http://禅道服务器ip:apache端口 即可访问和登录禅道。
+        禅道默认管理员帐号是 admin，密码 123456。
+        登录后，即可使用禅道项目管理功能。具体的使用，请直接参考我们的使用手册文档。
+        
+        其中 -ap参数 可以修改Apache的端口，-mp参数 可以修改Mysql的端口。（比如：/opt/zbox/zbox -ap 8080）
+        /opt/zbox/zbox -ap 8081  apche端口修改
+        /opt/zbox/zbox -mp 3307    mysql端口修改
+
+
+        二、如何访问数据库
+        
+        1、网页登录数据库禅道数据库管理用的是adminer，但是为了安全，访问adminer的时候需要身份验证;        
+	需要运行/opt/zbox/auth/adduser.sh来添加用户(先 cd /opt/zbox/auth/ 然后执行 ./adduser.sh)。
+        如何操作：网页访问 http://禅道服务的ip:apache端口，点击“数据库管理”按钮有2层验证：
+        
+        1）弹窗验证是输入运行 addusers.sh添加的用户名和密码。
+        我加的用户名是root，密码是123456。那么授权页面里用户名和密码就填写root和123456。
+        注意：这里添加的用户名和密码是自定义的，你可以根据你的使用习惯来添加。
+        你添加了什么用户名和密码就填写什么。
+        
+        2）网页直接显示登录界面：
+        系   统：默认选择MySQL。 
+        服务器：127.0.0.1:mysql端口 ，我在前面开启服务时，mysql端口启用的是3307。那么就填写127.0.0.1:3307。
+        用户名： root。（禅道默认的数据库用户名是root）
+        密   码：123456。（禅道默认的数据库密码是123456）
+        数据库：zentao。
+        导入数据：
+        
+        2、命令行连接数据库
+        登录数据库：/opt/zbox/bin/mysql -u root -P mysql端口 -p  （比如：/opt/zbox/bin/mysql -u root -P 3306 -p）
+        导入数据库：/opt/zbox/bin/mysql -u root -P mysql端口 -p 要导入的库名 < XXXX.sql （比如：/opt/zbox/bin/mysql -u root -P 3306 -p zentao < zentao.sql）
+        三、9.2.stable版本起Linux一键安装包安全级别升级，禁用了php解析。
+        如果你想在禅道的Linux一键安装包里安装蝉知企业门户系统（chanzhi）和然之协同办公系统（ranzhi）或者是其他第三方软件;
+        需要到/opt/zbox/etc/apache/httpd.conf 目录下做修改。
+        把 /opt/zbox/etc/apache/httpd.conf 目录下所有的 SetHandler text/plain 改为 SetHandler application/x-httpd-php ，然后重启服务。
+
+        编辑整理： Alinx                QQ群：578549158
+
