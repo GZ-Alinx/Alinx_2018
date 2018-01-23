@@ -1,0 +1,207 @@
+	tomcat install
+
+	一、基础安装
+
+
+
+	软件包下载地址：https://tomcat.apache.org/download-70.cgi
+
+    	下载二进制格式包
+	
+	此项：binary Distributions_Core
+	Core：       		核心包
+        Full documentation:   	文档
+        Deploer：      		部署器
+        Extras:           	扩展模块相关
+	
+	一、安装
+	1.查看本地可用包：
+	
+	[root@localhost ~]# yum list all | grep tomcat
+	
+	
+	
+	2.查看系统默认装载的openjdk 并卸载：
+	
+	[root@localhost tomcat]# rpm -qa | grep openjdk*
+	    java-1.8.0-openjdk-headless-1.8.0.131-11.b12.el7.x86_64
+	    java-1.7.0-openjdk-headless-1.7.0.141-2.6.10.5.el7.x86_64
+	    java-1.7.0-openjdk-1.7.0.141-2.6.10.5.el7.x86_64
+	    java-1.8.0-openjdk-1.8.0.131-11.b12.el7.x86_64
+	[root@localhost tomcat]# yum -y remove java-1.*
+	
+	
+	3.JDK安装并配置变量：上传包（建议同版本）
+	
+	[root@localhost tomcat]# rpm -ivh jdk-7u71-linux-x64.rpm
+	[root@localhost tomcat]# rpm -qa  jdk
+	jdk-1.7.0_71-fcs.x86_64
+	[root@localhost tomcat]# rpm -ql jdk            #查看安装路径并配置环境变量
+	[root@localhost tomcat]# vim /etc/profile   #末尾加入
+	
+	    export JAVA_HOME=/usr/java/jdk1.7.0_71 #java 家目录
+	            export JAVA_BIN=/usr/java/jdk1.7.0_71/bin #java 可执行文件目录
+	            export PATH=${JAVA_HOME}/bin:$PATH #系统环境变量
+	            export CLASSPATH=.:${JAVA_HOME}/lib/dt.jar:${JAVA_HOME}/lib/tools.jar #类路径
+	[root@localhost tomcat]# source /etc/profile            #加载立即生效
+	
+	
+
+	二、tomcat 安装
+
+	4.解压apache-tomcat包到/usr/local下
+	
+	[root@localhost tomcat]# tar xf apache-tomcat-7.0.82.tar.gz -C /usr/local/
+	[root@localhost tomcat]# cd !$
+	[root@localhost tomcat]# ll
+	总用量 96
+	drwxr-xr-x. 2 root root  4096 12月 29 08:21 bin            
+	drwxr-xr-x. 2 root root   158 9月  29 20:27 conf
+	drwxr-xr-x. 2 root root  4096 12月 29 08:21 lib
+	-rw-r--r--. 1 root root 56846 9月  29 20:27 LICENSE
+	drwxr-xr-x. 2 root root     6 9月  29 20:23 logs
+	-rw-r--r--. 1 root root  1239 9月  29 20:27 NOTICE
+	-rw-r--r--. 1 root root  8965 9月  29 20:27 RELEASE-NOTES
+	-rw-r--r--. 1 root root 16195 9月  29 20:27 RUNNING.txt
+	drwxr-xr-x. 2 root root    30 12月 29 08:21 temp
+	drwxr-xr-x. 7 root root    81 9月  29 20:26 webapps
+	drwxr-xr-x. 2 root root     6 9月  29 20:23 work
+	   
+	
+	[root@localhost tomcat]# ll conf/    #配置文件目录
+	总用量 212
+	-rw-------. 1 root root  13186 9月  29 20:27 catalina.policy    #定义tomcat自身安全策略（资源权限）
+	-rw-------. 1 root root   6496 9月  29 20:27 catalina.properties
+	-rw-------. 1 root root   1394 9月  29 20:27 context.xml     #为上下文提供的配置文件
+	-rw-------. 1 root root   3288 9月  29 20:27 logging.properties    #日志配置文件
+	-rw-------. 1 root root   6613 9月  29 20:27 server.xml   #核心配置文件
+	-rw-------. 1 root root   1950 9月  29 20:27 tomcat-users.xml  # 认证用户文件，安全性至关重要
+	-rw-------. 1 root root 168893 9月  29 20:27 web.xml    #默认的应用程序部署描述符
+	
+        默认的，应用程序部署描述：
+
+        部署: 将一个web应用程序所依赖的类装载进JVM
+	
+	[root@localhost tomcat]# ls lib/            #类库文件路径
+	
+	[root@localhost tomcat]# ls logs/   #日志路径，默认按天滚动
+	
+	[root@localhost tomcat]# ll temp/  #临时文件目录
+	
+	[root@localhost tomcat]# ls webapps/  #应用程序目录
+	docs  examples  host-manager  manager  ROOT
+	
+	[root@localhost tomcat]# ls work/  
+	#工作目录   .jsp 转换为.java  或者class文件的工作车间 可以访问一下tomcat，就会生产工作文件Catalina
+	
+	[root@localhost localhost]# systemctl stop firewalld  #关闭防火墙
+	
+	
+	
+	5.输出catalina环境变量（tocmat自身运行实例所在目录，一个服务器可以运行多个实例）
+	
+	 [root@localhost tomcat]# vim /etc/profile.d/tomcat.sh 编写脚本运行环境变量
+	
+	    export CATALINA_HOME=/usr/local/tomcat    安装目录
+	    export PATH=$PATH:$CATALINA_HOME/bin    安装目录下的bin目录
+
+	[root@localhost tomcat]# . /etc/profile.d/tomcat.sh    #读一下文件生效
+	
+	此目录下的脚本文件都可以当做参数传给catalina.sh
+	[root@localhost tomcat]# ls bin/  二进制程序路径(bat脚本、shll脚本、与jar库文件)
+	
+	[root@localhost tomcat]# catalina.sh version     相当于执行了version
+	Using CATALINA_BASE:   /usr/local/tomcat
+	Using CATALINA_HOME:   /usr/local/tomcat
+	Using CATALINA_TMPDIR: /usr/local/tomcat/temp
+	Using JRE_HOME:        /usr/java/jdk1.7.0_71
+	Using CLASSPATH:       /usr/local/tomcat/bin/bootstrap.jar:/usr/local/tomcat/bin/tomcat-juli.jar
+	Server version: Apache Tomcat/7.0.82
+	Server built:   Sep 29 2017 12:23:15 UTC
+	Server number:  7.0.82.0
+	OS Name:        Linux
+	OS Version:     3.10.0-693.el7.x86_64
+	Architecture:   amd64
+	JVM Version:    1.7.0_71-b14
+	JVM Vendor:     Oracle Corporation
+	
+	
+	
+	6.启动tomcat
+	
+	[root@localhost tomcat]# catalina.sh start
+	Using CATALINA_BASE:   /usr/local/tomcat
+	Using CATALINA_HOME:   /usr/local/tomcat
+	Using CATALINA_TMPDIR: /usr/local/tomcat/temp
+	Using JRE_HOME:        /usr/java/jdk1.7.0_71
+	Using CLASSPATH:       /usr/local/tomcat/bin/bootstrap.jar:/usr/local/tomcat/bin/tomcat-juli.jar
+	Tomcat started.
+	
+	
+	
+	7.编写启动脚本
+	
+	[root@localhost ~]# vim /etc/init.d/tomcatd
+	#!/bin/bash
+	# Tomcat init script for Linux
+	#
+	# chkconfig: 2345 96 14
+	# description: The Apache Tomcat servlet/JSP cmtainer.
+	JAVA_HOME=/usr/java/letest
+	CATALINA_HOME=/usr/local/tomcat
+	export JAVA_HOME CATALINA_HOME
+	exec $CATALINA_HOME/bin/catalina.sh $*
+	
+	[root@localhost ~]# chkconfig --add tomcatd
+	[root@localhost ~]# chkconfig --list tomcatd
+	注：该输出结果只显示 SysV 服务，并不包含
+	原生 systemd 服务。SysV 配置数据
+	可能被原生 systemd 配置覆盖。
+        要列出 systemd 服务，请执行 'systemctl list-unit-files'。
+	查看在具体 target 启用的服务请执行
+	'systemctl list-dependencies [target]'。
+	tomcatd            0:关    1:关    2:开    3:开    4:开    5:开    6:关
+	
+	
+	
+	
+	
+	启动方式
+	
+	[root@localhost ~]# catalina.sh --help
+	Using CATALINA_BASE:   /usr/local/tomcat
+	Using CATALINA_HOME:   /usr/local/tomcat
+	Using CATALINA_TMPDIR: /usr/local/tomcat/temp
+	Using JRE_HOME:        /usr/java/jdk1.7.0_71
+	Using CLASSPATH:       /usr/local/tomcat/bin/bootstrap.jar:/usr/local/tomcat/bin/tomcat-juli.jar
+	Usage: catalina.sh ( commands ... )
+	commands:
+	  debug             Start Catalina in a debugger
+	  debug -security   Debug Catalina with a security manager
+	  jpda start        Start Catalina under JPDA debugger
+	  run               Start Catalina in the current window
+	  run -security     Start in the current window with security manager
+	  start             Start Catalina in a separate window
+	  start -security   Start in a separate window with security manager
+	  stop              Stop Catalina, waiting up to 5 seconds for the process to end
+	  stop n            Stop Catalina, waiting up to n seconds for the process to end
+	  stop -force       Stop Catalina, wait up to 5 seconds and then use kill -KILL if still running
+	  stop n -force     Stop Catalina, wait up to n seconds and then use kill -KILL if still running
+	  configtest        Run a basic syntax check on server.xml - check exit code for result
+	  version           What version of tomcat are you running?
+	Note: Waiting for the process to end and use of the -force option require that $CATALINA_PID is defined
+	
+	
+	
+	
+	
+	8.安装mysql连接器
+	
+	[root@localhost ~]# tar -zxvf mysql-connector-java-5.1.34.tar.gz     
+	[root@localhost ~]# cd mysql-connector-java-5.1.34/
+	[root@localhost ~]# cp mysql-connector-java-5.1.34-bin.jar /usr/local/tomcat/lib/ 复制库文件到tomcat库文件中即可
+	[root@localhost ~]# catalina.sh stop
+	[root@localhost ~]# catalina.sh start
+	
+	
+	至此基础搭建已经完成...
