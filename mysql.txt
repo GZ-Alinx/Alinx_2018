@@ -1,0 +1,219 @@
+	
+
+	https://dev.mysql.com/downloads/mysql/5.7.html   下载地址（选择对应版本与包类型）
+	rpmfind.net    包下载地址
+	
+	    
+	
+	1.源码包    Source Code   源码包下载
+	
+	
+	
+	2.二进制    Linux-Generic  二进制包下载
+	
+	
+	3.RMP包    直接选择默认    rpm包下载
+	
+	
+	
+	
+	一、二进制安装：
+	
+	1.上传二进制包并解压
+	
+	
+	[root@localhost ~]# tar -zxvf mysql-5.6.38-linux-glibc2.12-x86_64.tar.gz -C /usr/local/
+	[root@localhost ~]#cd !$
+	[root@localhost mysql-5.6.38-linux-glibc2.12-x86_64]#ln -sv mysql-5.6.38-linux-glibc2.12-x86_64 mysql
+	
+	
+	2.软连接并配置，保留包的版本号等信息
+	
+	[root@localhost local]#ln -sv mysql-5.6.38-linux-glibc2.12-x86_64 mysql
+	
+	
+	3.生成主配置文件与启动脚本
+	
+	[root@localhost local]#cd mysql
+	[root@localhost local]#cp -p support-files/my-default.cnf /etc/my.cnf     
+	[root@localhost local]#cp -p support-files/mysql.server /etc/init.d/mysqld
+	[root@localhost local]#vim /etc/my.cnf
+	主配置文件查找路径：
+	/etc/my.cnf  /etc/mysqld/my.cnf $BASEDIR/my.cnf ~/.my.cnf  默认识别最后一个
+	就算没有主配置文件，mysql也可以跑起来，因为默认就已经定义一些配置。
+	主配置文件中是分段式的配置
+	[msyql] 客户端  
+	[mysqld]服务器端  
+	[client]针对所有客户端
+	          线程处理化：   thread_concurrency = 8  默认是8   可以修改为cpu颗数*2
+	          basedir = /usr/local/mysql     安装目录
+	          datadir = /data                       数据存放目录   
+	          port = 3306                           端口指定
+	          server_id = 1                          表示是本机的序号为1,一般来讲就是master的意思
+	          socket = /tmp/mysql.sock      本机通信需要socket文件，需确保路径正确，可以通过变量socker来调取
+	          
+	
+	 
+	
+	4.创建用户并授权
+	
+	[root@localhost local]#useradd -r -u 306 mysql
+	[root@localhost local]#chown -R mysql.mysql /usr/local/mysql/*
+	
+	
+	5.创建数据存放分区并初始化数据库
+	
+	[root@iZwz94icx2gijw8yfe1vyiZ mysql]# yum install libaio libaio-dev -y     #库文件安装
+	[root@iZwz94icx2gijw8yfe1vyiZ mysql]# yum install autoconf -y                #模块dumper安装
+	
+	[root@localhost local]#mkdir /data
+	[root@localhost local]#mysql/scripts/mysql_install_db --user=mysql --datadir=/data --basedir=/usr/local/mysql
+	[root@localhost ~]# ls /data/
+	auto.cnf  ib_logfile0  localhost.localdomain.err  mysql               test
+	ibdata1   ib_logfile1  localhost.localdomain.pid  performance_schema
+	
+	6.重新授权防止mysql用户被入侵后mysql数据被盗取（改属主）
+	
+	[root@localhost local]#chown -R root /usr/local/mysql/*
+	
+	
+	7.增加命令变量
+	
+	[root@localhost local]#vim /etc/profile
+	    export PATH=$PATH:/usr/local/bin
+	[root@localhost local]#source /etc/profile
+	
+	
+	8.开机启动
+	               CentOS7.x
+	[root@localhost ~]# systemctl enable mysqld
+	mysqld.service is not a native service, redirecting to /sbin/chkconfig.
+	Executing /sbin/chkconfig mysqld on
+	               Centos6.x
+	[root@localhost local]#chkconfig --add mysqld
+	[root@localhost local]#chkconfig --list mysqld
+	
+	
+	
+	
+	9.启动数据库并运行
+	
+	[root@localhost local]#systemctl start mysqld
+	[root@localhost ~]# mysql
+	Welcome to the MySQL monitor.  Commands end with ; or \g.
+	Your MySQL connection id is 5
+	Server version: 5.6.38 MySQL Community Server (GPL)
+	Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
+	Oracle is a registered trademark of Oracle Corporation and/or its
+	affiliates. Other names may be trademarks of their respective
+	owners.
+	Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+	mysql>
+	
+	msyql服务器维护了两类变量：
+	服务器变量： 定义mysql服务器运行特性   show global variablee  后期调优使用
+	状态变量：     保存了mysql服务器的运行统计数据  show global status 状态变量后期调优主要
+	
+	
+	以下步骤并非必须要做的步骤（建议做）
+	
+	10.输出库文件
+	
+	[root@localhost mysql]# ls lib/
+	libmysqlclient.a     libmysqlclient_r.so.18      libmysqlclient.so.18      libmysqld-debug.a
+	libmysqlclient_r.a   libmysqlclient_r.so.18.1.0  libmysqlclient.so.18.1.0  libmysqlservices.a
+	libmysqlclient_r.so  libmysqlclient.so           libmysqld.a               plugin
+	    -->生成库文件
+	[root@localhost mysql]#vim /etc/ld.so.conf.d/mysql.conf
+	/usr/local/mysql/lib
+	     -->加载库文件生效
+	[root@localhost mysql]# ldconfig -v | grep mysql
+	ldconfig: 无法对 /libx32 进行 stat 操作: 没有那个文件或目录
+	ldconfig: 多次给出路径“/usr/lib”
+	ldconfig: 多次给出路径“/usr/lib64”
+	ldconfig: 无法对 /usr/libx32 进行 stat 操作: 没有那个文件或目录
+	/usr/lib64/mysql:
+	             libmysqlclient.so.18 -> libmysqlclient.so.18.0.0
+	/usr/local/mysql/lib:
+	             libmysqlclient.so.18 -> libmysqlclient_r.so.18.1.0
+	
+	    -->操作系统会把所有的库文件缓存下来一起加载
+	[root@localhost mysql]# ls -l /etc/ld.so.cache
+	-rw-r--r--. 1 root root 72845 12月 28 14:11 /etc/ld.so.cache
+	
+	
+	11.输入头文件
+	
+	[root@localhost mysql]# ln -sv /usr/local/mysql/include /usr/include/mysql
+	"/usr/include/mysql" -> "/usr/local/mysql/include"
+	[root@localhost mysql]# ls /usr/include/mysql/
+	big_endian.h                 my_attribute.h  mysql               plugin_audit.h
+	byte_order_generic.h         my_byteorder.h  mysql_com.h         plugin_ftparser.h
+	byte_order_generic_x86_64.h  my_compiler.h   mysql_com_server.h  plugin.h
+	byte_order_generic_x86.h     my_config.h     mysqld_ername.h     plugin_validate_password.h
+	decimal.h                    my_dbug.h       mysqld_error.h      sql_common.h
+	errmsg.h                     my_dir.h        mysql_embed.h       sql_state.h
+	keycache.h                   my_getopt.h     mysql.h             sslopt-case.h
+	little_endian.h              my_global.h     mysql_time.h        sslopt-longopts.h
+	m_ctype.h                    my_list.h       mysql_version.h     sslopt-vars.h
+	m_string.h                   my_net.h        my_sys.h            typelib.h
+	my_alloc.h                   my_pthread.h    my_xml.h
+	
+	
+	12.msyql自带工具初始化
+	                
+	  [root@localhost ~]# mysql_secure_installation
+	[root@localhost ~]# mysql_secure_installation
+	NOTE: RUNNING ALL PARTS OF THIS SCRIPT IS RECOMMENDED FOR ALL MySQL
+	      SERVERS IN PRODUCTION USE!  PLEASE READ EACH STEP CAREFULLY!
+	In order to log into MySQL to secure it, we'll need the current
+	password for the root user.  If you've just installed MySQL, and
+	you haven't set the root password yet, the password will be blank,
+	so you should just press enter here.
+	Enter current password for root (enter for none):
+	OK, successfully used password, moving on...
+	Setting the root password ensures that nobody can log into the MySQL
+	root user without the proper authorisation.
+	Set root password? [Y/n] y    -->是否设置密码
+	New password:
+	Re-enter new password:
+	Password updated successfully!
+	Reloading privilege tables..
+	... Success!
+	By default, a MySQL installation has an anonymous user, allowing anyone
+	to log into MySQL without having to have a user account created for
+	them.  This is intended only for testing, and to make the installation
+	go a bit smoother.  You should remove them before moving into a
+	production environment.
+	Remove anonymous users? [Y/n] y   -->是否移除匿名用户
+	... Success!
+	Normally, root should only be allowed to connect from 'localhost'.  This
+	ensures that someone cannot guess at the root password from the network.
+	Disallow root login remotely? [Y/n] y   -->是否运行root远程登录
+	... Success!
+	By default, MySQL comes with a database named 'test' that anyone can
+	access.  This is also intended only for testing, and should be removed
+	before moving into a production environment.
+	Remove test database and access to it? [Y/n] y    -->是否移除test数据库
+	- Dropping test database...
+	... Success!
+	- Removing privileges on test database...
+	... Success!
+	Reloading the privilege tables will ensure that all changes made so far
+	will take effect immediately.
+	Reload privilege tables now? [Y/n] y            -->是否更新权限
+	... Success!
+	All done!  If you've completed all of the above steps, your MySQL
+	installation should now be secure.
+	Thanks for using MySQL!
+	Cleaning up...
+	
+	
+	                                                                                              至此mysql安装基本结束。。。
+	不知道的命令或者参数左右可以 rpm -qi 来查询
+	
+	开启mysql错误日志的方法：
+	vim /etc/my.cnf
+	[mysql_safe]
+	log-error = /data/mysql-master/logs/error.log
+	
