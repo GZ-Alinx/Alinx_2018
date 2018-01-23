@@ -1,0 +1,112 @@
+	目录
+	
+	    1.安装jdk1.7（目前支持1.7）
+	    2.安装tomcat
+	    3.导入包到tomcat/webapps
+	    4.安装zookerper
+	    5.添加环境变量
+	    6.启动tomcat
+	    7.打开浏览器访问
+	    #默认密码： root 、 root
+	
+	
+	前面的环境如果需要可以在仓库中查找~
+	
+	
+	
+	
+	4、安装zookerper
+	
+	    
+	单机安装、配置    1、下载zookeeper二进制安装包
+	http://apache.fayea.com/zookeeper
+	http://mirrors.hust.edu.cn/apache/zookeeper
+	
+	
+	    2.解压zookeeper安装包
+	
+	把zookeeper-3.4.3.tar.gz文件存放在/home/hadoop目录下，进行解压：
+	tar -zxvf zookeeper-3.4.3.tar.gz
+	chown -R hadoop:hadoop zookeeper-3.4.3
+	
+	
+	    3.设置环境变量
+	
+	在/etc/profile，/home/hadoop/.bashrc文件中添加如下红色信息  这句话原文有点问题 我使用来看就是 vi /etc/profile
+	#set java environment
+	ZOOKEEPER_HOME=/home/hadoop/zookeeper-3.4.3
+	MAHOUT_HOME=/home/hadoop/mahout-distribution-0.7
+	PIG_HOME=/home/hadoop/pig-0.9.2
+	HBASE_HOME=/home/hadoop/hbase-0.94.3
+	HIVE_HOME=/home/hadoop/hive-0.9.0
+	HADOOP_HOME=/home/hadoop/hadoop-1.1.1
+	JAVA_HOME=/home/hadoop/jdk1.7.0
+	PATH=$JAVA_HOME/bin:$ZOOKEEPER_HOME/bin:$PIG_HOME/bin:$MAHOUT_HOME/bin:$HBASE_HOME/bin:$HIVE_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/conf:$PATH
+	CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$ZOOKEEPER_HOME/lib:$HBASE_HOME/lib:$MAHOUT_HOME/lib:$PIG_HOME/lib:$HIVE_HOME/lib:$JAVA_HOME/lib/tools.jar
+	export ZOOKEEPER_HOME
+	export MAHOUT_HOME
+	export PIG_HOME
+	export HBASE_HOME
+	export HADOOP_HOME
+	export JAVA_HOME
+	export HIVE_HOME
+	export PATH
+	export CLASSPATH
+	
+	
+	    4.配置
+	
+	配置文件存放在$ZOOKEEPER_HOME/conf/目录下，将zoo_sample.cfd文件名称改为zoo.cfg,  缺省的配置内容如下： 下面这篇 需要注意的是不能有注释 不然 data后面 新建文件夹就会带上注释 导致zookeeper服务起不来 （底部我会介绍排错过程）
+	
+	
+	
+	# The number of milliseconds of each tick
+	tickTime=2000
+	# The number of ticks that the initial
+	# synchronization phase can take
+	initLimit=10
+	# The number of ticks that can pass between
+	# sending a request and getting an acknowledgement
+	syncLimit=5
+	# the directory where the snapshot is stored.
+	# do not use /tmp for storage, /tmp here is just
+	# example sakes.
+	dataDir=/home/hadoop/zookeeper-3.4.3/data
+	# the port at which the clients will connect
+	clientPort=2181
+	#
+	# Be sure to read the maintenance section of the
+	# administrator guide before turning on autopurge.
+	#
+	# http://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_maintenance
+	#
+	# The number of snapshots to retain in dataDir
+	#autopurge.snapRetainCount=3
+	# Purge task interval in hours
+	# Set to "0" to disable auto purge feature
+	#autopurge.purgeInterval=1
+	
+	
+	    注意点：
+	dataDir=/home/hadoop/zookeeper-3.4.3/data后面不能有空格其次是 后面不能跟注释 不然创建的文件夹名字是 data#注释
+	配置说明：
+	tickTime：这个时间是作为 Zookeeper 服务器之间或客户端与服务器之间维持心跳的时间间隔，也就是每个 tickTime 时间就会发送一个心跳。
+	dataDir：顾名思义就是 Zookeeper 保存数据的目录，默认情况下，Zookeeper 将写数据的日志文件也保存在这个目录里。
+	clientPort：这个端口就是客户端连接 Zookeeper 服务器的端口，Zookeeper 会监听这个端口，接受客户端的访问请求。
+	
+	
+	    5.启动zookeeper
+	
+	当这些配置项配置好后，你现在就可以启动zookeeper了：
+	
+	hadoop@ubuntu:~/ netstat -at|grep 2181 #查看zookeeper端口
+	hadoop@ubuntu:~/ netstat -nat #查看端口信息
+	hadoop@ubuntu:~/zookeeper-3.4.3/bin$ ./zkServer.sh start #启动
+	hadoop@ubuntu:~/zookeeper-3.4.3/bin$ jps #查看启动的服务名称
+	hadoop@ubuntu:~/zookeeper-3.4.3/bin$ ./zkServer.sh stop #关闭zkServer.sh start-foreground 查看日志
+	启动后要检查 Zookeeper 是否已经在服务，可以通过 netstat -at|grep 2181 命令查看是否有 clientPort 端口号在监听服务。
+	这里补充下ZooKeeper如果服务起不来的排查  http://www.myexception.cn/open-source/1906016.html
+	     集群安装、配置：
+	ZooKeeper集群搭建点击此处
+	
+	
