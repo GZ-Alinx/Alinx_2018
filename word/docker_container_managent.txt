@@ -1,0 +1,321 @@
+
+	容器管理
+	
+	
+	1、创建容器
+	
+	Docker的容器十分轻量级，用户可以随时创建或删除容器。
+	
+	新建容器：
+	
+	可以使用docker create 命令新建一个容器
+	
+	例：
+	
+	[root@real-serverB app]# docker create -it ubuntu:latest
+	f4be03b98242990499d8142d5f900915a032c6ea8b1b8c508a8e5f3d51967414
+	[root@real-serverB app]# docker ps -a
+	CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+	f4be03b98242        ubuntu:latest       "/bin/bash"         8 seconds ago       Created                                 big_montalcini
+	
+	
+	
+	2、新建并启动容器
+	
+	启动容器有两种方式，一种是基于镜像新建一个容器并启动，另外一个是将在终止状（Stopped）的容器重新启动，所需要的命令主要为docker run ， 等价于docker create 命令， 再执行docker start命令。
+	
+	例：
+	
+	下面的命令输出一个“Hello World”，之后容器自动终止：
+	
+	[root@real-serverB app]# docker run ubuntu /bin/echo 'Hello world'
+	Hello world
+	[root@real-serverB app]# docker ps -a
+	CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                      PORTS               NAMES
+	ccbc86216c21        ubuntu              "/bin/echo 'Hello wor"   2 seconds ago       Exited (0) 1 seconds ago                        sick_ritchie
+	a0289d157d61        ubuntu              "/bin/echo 'Hello wor"   38 seconds ago      Exited (0) 38 seconds ago                       thirsty_pasteur
+	f4be03b98242        ubuntu:latest       "/bin/bash"              7 minutes ago       Created                                         big_montalcini
+	[root@real-serverB app]#
+	
+	
+	这跟在本地执行/bin/echo ‘hello world’ 几乎感觉不出任何区别。
+	
+	当利用docker run 来创建并启动容器时，Docker在后台运行的标准操作包括：
+	  
+	    1.检查本地是否存在指定的镜像，不存在就从公有仓库下载；
+	    2.利用镜像创建并启动一个容器；
+	    3.分配一个文件系统，并在只读的镜像层外面挂载一层可读写层；
+	    4.从宿主主机配置的网桥接口中桥接一个虚拟接口到容器中去；
+	    5.从地址池配置一个IP地址给容器；
+	    6.执行用户指定的应用程序；
+	    7.执行完毕后容器被终止；
+	
+	    注意：  此项必须记得！！！
+	
+	
+	下面的命令则启动一个bash终端，允许用户进行交互：
+	 
+	例：   
+	
+	docker run -t -i ubuntu:latest /bin/bash
+	[root@real-serverB app]# docker images
+	REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+	docker.io/ubuntu    latest              2a4cca5ac898        9 days ago          111.5 MB
+	[root@real-serverB app]# docker run -t -i ubuntu:latest /bin/bash
+	root@049e5d2d75c3:/#
+	root@049e5d2d75c3:/# ls
+	bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+	root@049e5d2d75c3:/# exit
+	
+	    -t    选项让Docker分配一个伪终端（pseudo-tty）并绑定到容器的标准输入上；
+	
+	    -i    选项让容器的标准输入保持打开；
+	
+	
+	在交互模式下，用户可以通过所创建的终端来输入命令
+	
+	例：
+	
+	[root@real-serverB app]# docker run -t -i ubuntu:latest /bin/bash
+	root@1adaf5c1ab43:/# pwd
+	/
+	root@1adaf5c1ab43:/# ls
+	bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+	root@1adaf5c1ab43:/#exit
+	
+	用户可以按Ctrl+d 或输入exit命令来退出容器,对于所创建的bash容器，当使用exit命令退出之后，该容器就自动处于终止状态了。这是因为对于Docker容器来说，当运行的应用（此处例子中为bash）退出后，容器也乜有运行的必要了。
+	
+	
+	
+	
+	3、守护态运行
+	
+	 更多的时候，需要让Docker容器在后台以守护态（Daemonized）形式运行。用户可以通过添加 -d参数来实现。
+	
+	
+	例：
+	
+	[root@real-serverB app]# docker images
+	REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+	docker.io/ubuntu    latest              2a4cca5ac898        9 days ago          111.5 MB
+	[root@real-serverB app]# docker run -d ubuntu:latest /bin/sh -c "while true; do echo hello world ; sleep 1; done"
+	87b98878784d506ddaaac373ee14eb2609b73f49d7cfbc25f81240bb3ae36d0a
+	[root@real-serverB app]#
+	
+	容器启动后会返回一个唯一的ID，也可以通过docker ps命令来查看容器信息：
+	
+	[root@real-serverB app]# docker ps
+	CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+	87b98878784d        ubuntu:latest       "/bin/sh -c 'while tr"   2 minutes ago       Up 2 minutes
+	
+	
+	获取容器的输出信息，可以使用docker logs命令
+	# docker logs
+	
+	
+	
+	
+	4、终止容器 / 启动已终止的容器
+	
+	可以使用docker stop来终止一个运行中的容器
+	
+	例：
+	
+	[root@real-serverB app]# docker ps
+	CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+	87b98878784d        ubuntu:latest       "/bin/sh -c 'while tr"   12 minutes ago      Up 12 minutes                           determined_hopper
+	[root@real-serverB app]# docker stop 87b9
+	87b9
+	[root@real-serverB app]# docker ps
+	CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+	[root@real-serverB app]#
+	
+	它首先向容器发送SIGTERM信号,等待一段时间后（默认10秒），再发送SIGKILL信号终止容器
+	
+	
+	
+	可以使用docker ps -a -q来看到处于终止状态容器的ID信息
+	
+	例：
+	
+	[root@real-serverB app]# docker ps -a -q
+	13e1f42de801
+	2f291f610a94
+	5ab81c274f11
+	87b98878784d
+	524f302e53bc
+	1adaf5c1ab43
+	049e5d2d75c3
+	386fec060dca
+	ccbc86216c21
+	a0289d157d61
+	f4be03b98242
+	
+	
+	处于终止状态的容器，可以通过docker start 命令来重新启动：
+	
+	例:
+	[root@real-serverB app]# docker start 386
+	386
+	[root@real-serverB app]# docker ps
+	CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+	386fec060dca        ubuntu:latest       "/bin/bash"         45 minutes ago      Up 4 seconds                            happy_leakey
+	[root@real-serverB app]#
+	
+	
+	
+	说完启动停止也该说说重启了，重启使用 docker restart
+	
+	例：
+	
+	
+	[root@real-serverB app]# docker ps
+	CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+	386fec060dca        ubuntu:latest       "/bin/bash"         53 minutes ago      Up 7 minutes                            happy_leakey
+	[root@real-serverB app]# docker restart 386fec060dca
+	386fec060dca
+	
+	
+	
+	
+	
+	5、进入容器
+	
+	
+	在使用-d参数时，容器启动会进入后台，用户无法看到容器中的信息。某些时候如果需要进入容器进行操作，有多种方法，包括使用docker attach命令、docker exec命令，以及nsenter 工具等
+	
+	
+	attach 命令：
+	
+	docker attach 是Docker自带的命令
+	
+	例：
+	
+	[root@real-serverB ~]# docker attach happy_leakey
+	root@386fec060dca:/#
+	root@386fec060dca:/# pwd
+	/
+	root@386fec060dca:/# ps
+	  PID TTY          TIME CMD
+	    1 ?        00:00:00 bash
+	   12 ?        00:00:00 ps
+	root@386fec060dca:/#
+	
+	但是这样会有局限性，如果我有多个容器，那这样的窗口就已经被占用了，当然你也可以开多个终端，但这并不是我们想要的。
+	
+	
+	
+	exec命令：
+	   
+	docker自1.3版本起，提供了一个更加方便的工具exec,可以直接在容器内运行命令。例如进入到刚创建的容器中，并启动一个bash：
+	
+	
+	例：
+	
+	
+	[root@real-serverB ~]# docker exec -ti 386fec060dca /bin/bash
+	root@386fec060dca:/# docker
+	bash: docker: command not found
+	root@386fec060dca:/# ls
+	bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+	root@386fec060dca:/# pwd
+	/
+	
+	
+	nsenter工具:
+	
+	nsenter工具在util-linux包2.23版本后包含。如果系统中util-linux包没有该命令，可以按照下面的方法从源码安装：
+	
+	
+	curl https://www.kernel.org/pub/linux/utils/util-linux/v2.24/util-linux-2.24.tar.gz | tar -zxf- ;  cd util-linux-2.24;
+	./configure --without-ncurses
+	make nsenter && cp nsenter /usr/local/bin
+	
+	为了使用nsenter链接到容器，还需要找到容器的进程的进程PID,可以通过下面的命令获取:
+	
+	
+	整理中、、、
+	
+	
+	
+	
+	6、删除容器
+	
+	
+	可以使用docker rm 命令删除处于终止状态的容器，命令格式为docker rm [OPTIONS] CONTAINER [CONTAINER...] 支持的选项包括：
+	
+	
+	-f , --force=false 强行终止并删除一个运行中的容器；
+	-l， --link=false 删除容器的链接，但保留容器；
+	-v，--volumes=false 删除容器挂载的数据卷；
+	
+	[root@real-serverB ~]# docker rm ccbc86216c21
+	ccbc86216c21
+	
+	如果要删除一个运行中的容器，可以添加-f参数，Docker会发送SIGKILL信号给容器，终止其中的应用:
+	
+	
+	[root@real-serverB ~]# docker run -d ubuntu:latest /bin/sh -c "while true; do echo hello world; sleep 1; done"
+	550483d61a76d93fae1302f57dcc5c3ad0635e8751368b2032f381a87fe2dc7a
+	[root@real-serverB ~]# docker rm 55048
+	Error response from daemon: You cannot remove a running container 550483d61a76d93fae1302f57dcc5c3ad0635e8751368b2032f381a87fe2dc7a. Stop the container before attempting removal or use -f
+	[root@real-serverB ~]# docker rm -f 55048
+	55048
+	[root@real-serverB ~]#
+	
+	
+	
+	
+	
+	
+	6、导入和导出容器
+	
+	
+	
+	导出容器
+	
+	    导出容器是指导出一个已经创建的容器到一个文件，不管此时这个容器是否处于运行状态，可以使用docker export命令;
+	    
+	    该命令格式为docker export CONTAINER;
+	
+	    例：
+	
+	[root@real-serverB ~]# docker ps
+	CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+	386fec060dca        ubuntu:latest       "/bin/bash"         2 hours ago         Up 56 minutes                           happy_leakey
+	[root@real-serverB ~]# docker export 386f > ubuntu_for_run.tar
+	[root@real-serverB ~]# ls
+	app  safe-rm-0.12.tar.gz  ubuntu_for_run.tar  util-linux-2.24
+	[root@real-serverB ~]#
+	
+	    可以将这些容器传输到其他服务器上，在其他机器上通过导入命令实现容器迁移。
+	
+	
+	
+	
+	导入容器
+	
+	    导出的文件可以使用docker import命令导入，成为镜像。
+	
+	    例：
+	
+	[root@real-serverB ~]# cat ubuntu_for_run.tar | docker import - ub/ubuntu:v1.0
+	sha256:11717415be3d5fe95943b404b7db5d58b60c2a0f0ff091b9fa1acd37dbc9468e
+	
+	
+	
+	总结：
+	
+	
+	容器是直接提供应用服务的组件，也是Docker实现快速的启停和高效服务性能的基础；
+	在生产环境中，因为容器自身的轻量级特性，后期可以使用HA机制，例如HAProxy 工具来代理容器访问，这样在容器出现故障的时候，可以快速切换到其他容器，还可以自动重启故障容器。
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
