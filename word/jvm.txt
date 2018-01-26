@@ -1,0 +1,125 @@
+	
+
+	一份8G内存Tomcat服务器的JVM垃圾回收G1算法参数清单
+	
+	目前网上大多是CMS相关参数的介绍，推荐JDK 1.8
+	
+	注意一下参数是针对G1算法的参数设置，目前只是理论设置，未经实战检验过。
+	
+	每个系统的业务类型不一样，可以根据自己需要修改配置参数。
+	
+	最终的JVM参数，应该经过JMX实时监控结果、堆分析、线程栈分析来一步步调优
+	
+	推荐可视化监控工具：MAT、VisualVM、JMC
+	
+	详细参数的意思大家可以参考官网的解释：
+	
+	
+	
+	-server 
+	-Djava.library.path=/usr/local/apr/lib 
+	-Djava.io.tmpdir=/tmp 
+	-Xss228K 
+	-Xms4500m 
+	-Xmx4500m 
+	-XX:MetaspaceSize=386m 
+	-XX:MaxMetaspaceSize=386m 
+	-XX:MaxDirectMemorySize=1024m 
+	-XX:InitialCodeCacheSize=32m 
+	-XX:ReservedCodeCacheSize=256m 
+	-XX:MinMetaspaceFreeRatio=40 
+	-XX:MaxMetaspaceFreeRatio=70 
+	-XX:-UseLargePagesInMetaspace 
+	-XX:InitialCodeCacheSize=96m 
+	
+	
+	-XX:+UseG1GC 
+	-XX:G1HeapRegionSize=2m 
+	-XX:InitiatingHeapOccupancyPercent=45 
+	-XX:MaxGCPauseMillis=200 
+	-XX:GCPauseIntervalMillis=201 
+	-XX:ParallelGCThreads=4 
+	-XX:ConcGCThreads=1 
+	-XX:NewRatio=2 
+	-XX:SurvivorRatio=8 
+	-XX:TargetSurvivorRatio=50 
+	-XX:InitialTenuringThreshold=7 
+	-XX:MaxTenuringThreshold=15 
+	-XX:G1ReservePercent=10 
+	
+	
+	-Dsun.rmi.dgc.server.gcInterval=7200000 
+	-Ddruid.registerToSysProperty=true 
+	-XX:+UseTLAB 
+	-XX:+ResizeTLAB 
+	-XX:TLABSize=64k 
+	-XX:TLABRefillWasteFraction=64
+	-XX:OnStackReplacePercentage=140  
+	-XX:BackEdgeThreshold=10000 
+	-XX:CompileThreshold=1000 
+	-XX:-BackgroundCompilation 
+	-XX:LargePageSizeInBytes=0  
+	-XX:-OmitStackTraceInFastThrow 
+	-XX:-DisableExplicitGC 
+	-XX:-ExplicitGCInvokesConcurrent 
+	-XX:-ExplicitGCInvokesConcurrentAndUnloadsClasses 
+	-XX:+UnlockExperimentalVMOptions 
+	-XX:+AggressiveOpts 
+	-XX:+UseFastAccessorMethods 
+	-XX:+OptimizeStringConcat 
+	-XX:+UseCompressedOops  
+	-XX:+ScavengeBeforeFullGC 
+	-XX:+AlwaysPreTouch 
+	-XX:+UseGCOverheadLimit 
+	-XX:+UseThreadPriorities 
+	-XX:+UseCodeCacheFlushing 
+	-XX:+DoEscapeAnalysis 
+	-XX:+EliminateAllocations 
+	-XX:+EliminateLocks 
+	-XX:+UseStringDeduplication 
+	-XX:-UseBiasedLocking 
+	-XX:BiasedLockingStartupDelay=0 
+	-XX:AutoBoxCacheMax=20000 
+	-XX:+PerfDisableSharedMem 
+	-XX:+EliminateLocks 
+	-XX:+UseGCOverheadLimit 
+	-XX:+ParallelRefProcEnabled 
+	-XX:+Inline 
+	-Xshare:off 
+	-Xverify:none 
+	-XX:-UseCounterDecay 
+	-XX:+UseCompressedClassPointers  
+	-XX:-TieredCompilation 
+	-Djava.security.egd=file:/dev/./urandom
+	
+	
+	-Dcom.sun.management.jmxremote 
+	-Dcom.sun.management.jmxremote.port=9999 
+	-Dcom.sun.management.jmxremote.ssl=false 
+	-Dcom.sun.management.jmxremote.authenticate=false 
+	-Djava.rmi.server.hostname=172.16.1.18 
+	-XX:+UnlockCommercialFeatures 
+	-XX:+FlightRecorder 
+	-XX:FlightRecorderOptions=loglevel=info 
+	
+	
+	-Xloggc:/home/dev/logs/tomcat8/tomcat8_gc.log 
+	-XX:ErrorFile=/home/dev/logs/tomcat8/tomcat8_gc_error_crash_%p.log 
+	-XX:HeapDumpPath=/home/dev/logs/tomcat8 
+	-XX:+HeapDumpOnOutOfMemoryError 
+	-XX:NumberOfGCLogFiles=10  
+	-XX:GCLogFileSize=2g 
+	-XX:+UseGCLogFileRotation 
+	
+	
+	-XX:+PrintVMOptions 
+	-XX:+PrintHeapAtGC 
+	-XX:+PrintGCDetails 
+	-XX:+PrintGCDateStamps 
+	-XX:+PrintGCTimeStamps 
+	-XX:+PrintTenuringDistribution 
+	-XX:+PrintAdaptiveSizePolicy 
+	-XX:+PrintGCApplicationStoppedTime 
+	-XX:+PrintGCApplicationConcurrentTime 
+	-XX:+PrintConcurrentLocks 
+	-XX:+TraceClassUnloading
