@@ -1,0 +1,151 @@
+	
+	1、tomcat JVM优化
+	详见JVM优化
+	
+	      http://blog.csdn.net/sinlff/article/details/62038816
+	
+	
+	
+	2、tomcat线程池
+	TOMCAT_HOME/conf/server.xml
+	name：线程池名称，用于 Connector中指定。
+	namePrefix：所创建的每个线程的名称前缀，一个单独的线程名称为 namePrefix+threadNumber。
+	maxThreads：池中最大线程数。
+	minSpareThreads：活跃线程数，也就是核心池线程数，这些线程不会被销毁，会一直存在。
+	maxIdleTime：线程空闲时间，超过该时间后，空闲线程会被销毁，默认值为6000（1分钟），单位毫秒。
+	maxQueueSize：在被执行前最大线程排队数目，默认为Int的最大值，也就是广义的无限。除非特殊情况，这个值不需要更改，否则会有请求不会被处理的情况发生。
+	prestartminSpareThreads：启动线程池时是否启动 minSpareThreads部分线程。默认值为false，即不启动。
+	threadPriority：线程池中线程优先级，默认值为5，值从1到10。
+	className：线程池实现类，未指定情况下，默认实现类为org.apache.catalina.core.StandardThreadExecutor。如果想使用自定义线程池首先需要实现 org.apache.catalina.Executor接口。
+	线程池配置完成后需要在 Connector中指定
+	
+	
+	3、tomcat并发Connector，参数说明http://1632004.blog.163.com/blog/static/29991497201201912858468/官网参数说明http://tomcat.apache.org/tomcat-7.0-doc/config/http.html
+	org.apache.coyote.http11.Http11NioProtocol
+	org.apache.coyote.http11.Http11AprProtocol
+	keepAliveTimeout - 表示在下次请求过来之前，tomcat保持该连接多久。这就是说假如客户端不断有请求过来，且未超过过期时间，则该连接将一直保持。
+	maxKeepAliveRequests -表示该连接最大支持的请求数。超过该请求数的连接也将被关闭（此时就会返回一个Connection: close头给客户端）。 (maxKeepAliveRequests="1"代表禁用长连接)（1表示禁用，-1表示不限制个数，默认100个。一般设置在100~200之间）the maximum number of HTTP requests that can be held in the pipeline until the connection is closed by the server. Setting this attribute to 1 disables HTTP/1.0 keep-alive, as well as HTTP/1.1 keep-alive and pipelining. Setting this to -1 allows an unlimited number of pipelined or keep-alive HTTP requests. If not specified, this attribute is set to 100.
+	maxQueueSize：在被执行前最大线程排队数目，默认为Int的最大值，也就是广义的无限。除非特殊情况，这个值不需要更改，否则会有请求不会被处理的情况发生。
+	acceptCount：当所有可能的请求处理线程都在使用时传入连接请求的最大队列长度。如果未指定，默认值为100。一般是设置的跟 maxThreads一样或一半，此值设置的过大会导致排队的请求超时而未被处理。所以这个值应该是主要根据应用的访问峰值与平均值来权衡配置。
+	响应报文压缩 compression="on"
+	
+	
+	<Executor name="tomcatThreadPool" namePrefix="catalina-exec-" maxThreads="3000" minSpareThreads="500" maxIdleTime="180000" prestartminSpareThreads="true" threadPriority="5"/>
+	<Connector port="8080" protocol="org.apache.coyote.http11.Http11AprProtocol" 
+	connectionTimeout="30000" asyncTimeout="30000" keepAliveTimeout="10000" maxKeepAliveRequests="200" 
+	executor="tomcatThreadPool" maxConnections="3000" acceptCount="3000" 
+	acceptorThreadCount="4" acceptorThreadPriority="5"
+	maxHttpHeaderSize="4096" socketBuffer="10240" 
+	SSLEnabled="false" URIEncoding="UTF-8" useBodyEncodingForURI="true" tcpNoDelay="true" enableLookups="false" disableUploadTimeout="true" 
+	compression="off" compressionMinSize="512" noCompressionUserAgents="gozilla,traviata" compressableMimeType="text/html,text/xml,text/javascript,application/javascript,text/css,text/plain,application/json"/>
+	
+	maxSpareThreads 在线程池开始停止不必要的线程之前，允许存在的最大未使用的请求处理线程
+	acceptCount 当所有可能的请求处理线程都被使用的时候，连接请求队列的最大长度。如果该队列为满，所有的请求都被拒绝，缺省值为10。（不能小于maxSpareThreads ） 
+	maxKeepAliveRequests最大长连接个数（1表示禁用，-1表示不限制个数，默认100个）
+	KeepAliveTimeout长连接超时时间
+	enableLookups 若设为true, 则支持域名解析，可把 ip 地址解析为主机名 
+	redirectPort 在需要基于安全通道的场合，把客户请求转发到基于SSL 的 redirectPort 端口 
+	
+	
+	4、关闭tomcat多余的log
+	TOMCAT_HOME/conf/server.xml -> <Valve className="org.apache.catalina.valves.AccessLogValve"注释掉
+	TOMCAT_HOME/conf/logging.properties -> handlers=java.util.logging.ConsoleHandler、修改log日志指向路径
+	
+	
+	5、Apr  I/O
+	
+	tomcat8/conf/server.xml放开注释
+	<Listener SSLEngine="on" className="org.apache.catalina.core.AprLifecycleListener"/>
+	
+	apr、apr-util、native
+	apr(Apache Portable Runtime/Apache可移植运行时)，是Apache HTTP服务器的支持库。你可以简单地理解为，Tomcat将以JNI的形式调用Apache HTTP服务器的核心动态链接库来处理文件读取或网络传输操作
+	，从而大大地提高Tomcat对静态文件的处理性能。 
+	Tomcat apr也是在Tomcat上运行高并发应用的首选模式。
+	tomcat-native.tar.gz 可以在tomcat/bin目录下找到
+	windows安装：
+	http://www.blogjava.net/tinguo002/archive/2014/07/17/415939.html?utm_source=tuicool
+	步骤一：tcnative-1.dll放入tomcat/bin目录
+	步骤二：windows环境变量Path增加;D:\soft\tomcat7\bin
+	步骤三：protocol="org.apache.coyote.http11.Http11AprProtocol"
+	
+	
+	linux安装：
+	http://blog.csdn.net/god123209/article/details/8784289
+	启动不报一下提示，表示Apr插件已安装
+	Jul 27, 2012 7:19:34 PM org.apache.catalina.core.AprLifecycleListener init
+	INFO: The APR based Apache Tomcat Native library which allows optimal performance in production environments was not found on the java.library.path: /usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib
+	(1)安装APR tomcat-native
+	    apr-1.3.8.tar.gz   安装在/usr/local/apr
+	    #tar zxvf apr-1.3.8.tar.gz
+	    #cd apr-1.3.8
+	    #./configure;make;make install
+	    
+	    apr-util-1.3.9.tar.gz  安装在/usr/local/apr/lib
+	    #tar zxvf apr-util-1.3.9.tar.gz
+	    #cd apr-util-1.3.9  
+	    #./configure --with-apr=/usr/local/apr ----with-java-home=JDK;make;make install
+	    
+	    #cd apache-tomcat-6.0.20/bin  
+	    #tar zxvf tomcat-native.tar.gz  
+	    #cd tomcat-native/jni/native  
+	    #./configure --with-apr=/usr/local/apr;make;make install
+	    
+	  (2)设置 Tomcat 整合 APR
+	    修改 tomcat 的启动 shell （startup.sh），在该文件中加入启动参数：
+	      CATALINA_OPTS="$CATALINA_OPTS -Djava.library.path=/usr/local/apr/lib" 。
+	
+	
+	  (3)判断安装成功:
+	    如果看到下面的启动日志，表示成功。
+	   org.apache.coyote.http11.Http11AprProtocol init
+	   Loaded APR based Apache Tomcat Native library
+	   Starting ProtocolHandler ["http-apr
+	
+	
+	6、设置session过期时间、redis集群会话共享：TOMCAT_HOME/conf/context.xml -> Valve Manager Session Redis 
+	tomcat8/conf/context.xml
+	<Valve className="com.radiadesign.catalina.session.RedisSessionHandlerValve"/>  
+	<Manager className="com.radiadesign.catalina.session.RedisSessionManager" 
+	expireSessionSecond="604800"
+	isCluster="false"
+	redisInfo="172.16.1.19:6381"
+	redisPwd=""
+	appId="10000"
+	minIdle="5"
+	minEvictableIdleTimeMillis="1500"
+	maxIdle="10"
+	maxTotal="30"
+	maxWaitMillis="3000"
+	testOnBorrow="true"/>
+	
+	7、关闭自动部署功能
+	<Host appBase="webapps" autoDeploy="true" name="localhost" unpackWARs="true">
+	改为
+	autoDeploy="false"
+	
+	8、关闭自动热更新reloadable="false"
+	server.xml <Context>部署，设置reloadable="false"
+	
+	9、禁止tomcat扫描jar包的tld文件，
+	tomcat/conf/logging.properties 取消注释org.apache.jasper.compiler.TldLocationsCache.level=FINE
+	tomcat/conf/catalina.properties   修改tomcat.util.scan.StandardJarScanFilter.jarsToSkip=*.jar
+	server.xml开启<Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on"/>
+	
+	
+	10、jsp development设置为false，或者checkInterval配置后台编译的触发频率
+	  genStringAsCharArray=true
+	  trimSpace=true
+	  enablePooling=true
+	  jsp标签池
+	
+	
+	11、增大TCP连接内核参数：web server允许的最大连接数还受制于操作系统的内核参数设置，通常Windows是2000个左右，Linux是1000个左右。
+	
+	
+	12、与web服务器集成
+	12.1、nginx实现Keep-AlivekeepAliveTimeout="8000" maxKeepAliveRequests="50" 
+	12.2、nginx-SSL支持
+	12.3、处理静态文件
+	
+	13、nginx_AJP_mode
+	nginx ajp tomcat
