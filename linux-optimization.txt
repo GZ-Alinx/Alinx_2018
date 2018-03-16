@@ -1,0 +1,985 @@
+服务器基础优化标准：
+
+
+1、服务器基础优化标准是服务器管理运维的重要指标，在流程与性能等多方面都会得到大大的提升！！
+
+	优化项：
+
+		基础优化、安全优化、防护Syn洪水攻击、SSH优化（禁止root用户直接登陆、端口修改【必要时使用key认证】）、开启路由转发功能、清除垃圾服务、IO性能测试、Nmap扫描、设置复杂登陆密码；
+	
+
+		
+
+
+
+
+		Linux基础优化:	
+
+
+
+	
+			1.内核优化
+
+		sysctl命令用来配置与显示在/proc/sys目录中的内核参数，如果想使用参数长期保存，可以通过编辑/etc/sysctl.conf文件来实现；
+
+		对于linux内核参数调整有两种方法：
+
+		方法一：修改/proc下内核参数文件内容，不能使用编辑器来修改内核参数文件，理由是由于内核随时可能更改这些文件中的任意一个，另外，这些内核参数文件都是虚拟文件，实际中不存在，因此不能使用编辑器进行编辑，而是使用echo命令，然后从命令行将输出重定向至 /proc 下所选定的文件中。如：将 timeout_timewait 参数设置为30秒：
+	
+		echo 30 > /proc/sys/net/ipv4/tcp_fin_timeout 
+		参数修改后立即生效，但是重启系统后，该参数又恢复成默认值。因此，想永久更改内核参数，需要修改/etc/sysctl.conf文件
+
+    	方法二：修改/etc/sysctl.conf文件。检查sysctl.conf文件，如果已经包含需要修改的参数，则修改该参数的值，如果没有需要修改的参数，在sysctl.conf文件中添加参数。
+    
+       	net.ipv4.tcp_fin_timeout=30	保存退出后，可以重启机器使参数生效；
+    	sysctl  -p 如果想使参数马上生效，也可以执行如下命令： 
+
+		
+
+	sysctl.conf文件参数设置说明：
+
+	proc/sys/net/core/wmem_max
+	最大socket写buffer,可参考的优化值:873200
+	 
+	/proc/sys/net/core/rmem_max 
+	最大socket读buffer,可参考的优化值:873200
+	/proc/sys/net/ipv4/tcp_wmem 
+	TCP写buffer,可参考的优化值: 8192 436600 873200
+	 
+	/proc/sys/net/ipv4/tcp_rmem 
+	TCP读buffer,可参考的优化值: 32768 436600 873200
+	 
+	/proc/sys/net/ipv4/tcp_mem 
+	同样有3个值,意思是: 
+	net.ipv4.tcp_mem[0]:低于此值,TCP没有内存压力. 
+	net.ipv4.tcp_mem[1]:在此值下,进入内存压力阶段. 
+	net.ipv4.tcp_mem[2]:高于此值,TCP拒绝分配socket. 
+	上述内存单位是页,而不是字节.可参考的优化值是:786432 1048576 1572864
+	 
+	/proc/sys/net/core/netdev_max_backlog 
+	进入包的最大设备队列.默认是300,对重负载服务器而言,该值太低,可调整到1000
+	 
+	/proc/sys/net/core/somaxconn 
+	listen()的默认参数,挂起请求的最大数量.默认是128.对繁忙的服务器,增加该值有助于网络性能.可调整到256.
+	 
+	/proc/sys/net/core/optmem_max 
+	socket buffer的最大初始化值,默认10K
+	 
+	/proc/sys/net/ipv4/tcp_max_syn_backlog 
+	进入SYN包的最大请求队列.默认1024.对重负载服务器,可调整到2048
+	 
+	/proc/sys/net/ipv4/tcp_retries2 
+	TCP失败重传次数,默认值15,意味着重传15次才彻底放弃.可减少到5,尽早释放内核资源.
+	 
+	/proc/sys/net/ipv4/tcp_keepalive_time 
+	/proc/sys/net/ipv4/tcp_keepalive_intvl 
+	/proc/sys/net/ipv4/tcp_keepalive_probes 
+	这3个参数与TCP KeepAlive有关.默认值是: 
+	tcp_keepalive_time = 7200 seconds (2 hours) 
+	tcp_keepalive_probes = 9 
+	tcp_keepalive_intvl = 75 seconds 
+	意思是如果某个TCP连接在idle 2个小时后,内核才发起probe.如果probe 9次(每次75秒)不成功,内核才彻底放弃,认为该连接已失效.对服务器而言,显然上述值太大. 可调整到: 
+	/proc/sys/net/ipv4/tcp_keepalive_time 1800 
+	/proc/sys/net/ipv4/tcp_keepalive_intvl 30 
+	/proc/sys/net/ipv4/tcp_keepalive_probes 3
+	 
+	/proc/sys/net/ipv4/ip_local_port_range 
+	指定端口范围的一个配置,默认是32768 61000,已够大.
+	net.ipv4.tcp_syncookies = 1 
+	表示开启SYN Cookies。当出现SYN等待队列溢出时，启用cookies来处理，可防范少量SYN攻击，默认为0，表示关闭；
+
+
+	net.ipv4.tcp_tw_reuse = 1 
+	表示开启重用。允许将TIME-WAIT sockets重新用于新的TCP连接，默认为0，表示关闭；
+
+
+	net.ipv4.tcp_tw_recycle = 1 
+	表示开启TCP连接中TIME-WAIT sockets的快速回收，默认为0，表示关闭。
+
+
+	net.ipv4.tcp_fin_timeout = 30 
+	表示如果套接字由本端要求关闭，这个参数决定了它保持在FIN-WAIT-2状态的时间。
+
+
+	net.ipv4.tcp_keepalive_time = 1200 
+	表示当keepalive起用的时候，TCP发送keepalive消息的频度。缺省是2小时，改为20分钟。
+
+
+	net.ipv4.ip_local_port_range = 1024 65000 
+	表示用于向外连接的端口范围。缺省情况下很小：32768到61000，改为1024到65000。
+
+
+	net.ipv4.tcp_max_syn_backlog = 8192 
+	表示SYN队列的长度，默认为1024，加大队列长度为8192，可以容纳更多等待连接的网络连接数。
+
+
+	net.ipv4.tcp_max_tw_buckets = 5000 
+	表示系统同时保持TIME_WAIT套接字的最大数量，如果超过这个数字，TIME_WAIT套接字将立刻被清除并打印警告信息。默认为 180000，改为 5000。对于Apache、Nginx等服务器，上几行的参数可以很好地减少TIME_WAIT套接字数量，但是对于Squid，效果却不大。此项参数可以控制TIME_WAIT套接字的最大数量，避免Squid服务器被大量的TIME_WAIT套接字拖死。
+
+		
+
+	安全优化:
+	
+	1.远程安全（SSH服务安全）
+	vim /etc/ssh/sshd_conf 编辑此配置文件进行修改
+
+	1. 修改默认端口
+
+	#Port 22
+
+	2. 修改监听协议,只监听某个或某些网络协议
+
+	#AddressFamily any
+
+	AddressFamily inet
+
+	# 3. 修改ssh只监听内网IP地址(IPV4和IPV6)
+
+	#ListenAddress 0.0.0.0 #监听IPV4所有网络地址
+
+	ListenAddress 192.168.171.0
+
+	# 4. 设置密钥生命周期,定时更新密钥,并将密钥设置尽可能长
+
+	# --->(需设置Protocol 1)
+
+	#KeyRegenerationInterval 1h
+
+	# 在SSH-1协议下，短命的服务器密钥将以此指令设置的时间为周期(秒)，不断重新生成。 
+
+	# 这个机制可以尽量减小密钥丢失或者黑客攻击造成的损失。 
+
+	# 设为 0 表示永不重新生成，默认为 3600(秒)。
+
+	#ServerKeyBits 1024
+
+	# 指定临时服务器密钥的长度。仅用于SSH-1。默认值是 768(位)。最小值是 512 。
+
+	# 5. 禁止root用户远程登录
+
+	#PermitRootLogin yes # 允许root用户登录
+
+	PermitRootLogin no # 禁止root用户远程登录
+
+	# 6. 开启基于密码认证的远程登录
+
+	#PasswordAuthentication yes
+
+	# 是否允许使用基于密码的认证。默认为"yes"。
+
+	# 7. 禁止使用空密码的用户登录
+
+	#PermitEmptyPasswords no
+
+	# 是否允许密码为空的用户远程登录。默认为"no"。
+
+	# 8. 关闭质疑-应答模式
+
+	# Change to no to disable s/key passwords
+
+	#ChallengeResponseAuthentication yes
+
+	ChallengeResponseAuthentication no
+
+	# 是否允许质疑-应答(challenge-response)认证。默认值是"yes"。 
+
+	# 所有 login.conf(5) 中允许的认证方式都被支持。 
+
+	# 9. 开启Kerberos认证
+
+	# Kerberos options
+
+	#KerberosAuthentication no
+
+	# 是否要求用户为 PasswordAuthentication  提供的密码必须通过 Kerberos KDC 认证，也就是是否使用Kerberos认证。 
+
+	# 要使用Kerberos认证，服务器需要一个可以校验  KDC identity 的 Kerberos servtab 。默认值是"no"。
+
+	#KerberosOrLocalPasswd yes
+
+	# 如果 Kerberos 密码认证失败，
+
+	#     那么该密码还将要通过其它的认证机制(比如 /etc/passwd)。 
+
+	# 默认值为"yes"。 
+
+	#KerberosTicketCleanup yes
+
+	# 是否在用户退出登录后自动销毁用户的 ticket 。默认值是"yes"。
+
+	#KerberosGetAFSToken no
+
+	# 如果使用了 AFS 并且该用户有一个 Kerberos 5 TGT，那么开启该指令后， 
+
+	# 将会在访问用户的家目录前尝试获取一个 AFS token 。默认为"no"。
+
+	#KerberosUseKuserok yes
+
+	# 10. 开启GSSAPI用户认证
+
+	# GSSAPI options
+
+	#GSSAPIAuthentication no
+
+	# 是否允许使用基于 GSSAPI 的用户认证。默认值为"no"。仅用于SSH-2。
+
+	GSSAPIAuthentication yes
+
+	#GSSAPICleanupCredentials yes
+
+	#  是否在用户退出登录后自动销毁用户凭证缓存。默认值是"yes"。仅用于SSH-2。
+
+	GSSAPICleanupCredentials yes
+
+	#GSSAPIStrictAcceptorCheck yes
+
+	# 是否对客户端进行严格的身份认证.若为”yes”,则客户端会在服务端被验证主机名
+
+	#GSSAPIKeyExchange no
+
+	# 11. 禁止 X11 转发
+
+	#X11Forwarding no
+
+	# 是否允许进行 X11 转发。默认值是"no"，设为"yes"表示允许。 
+
+	# 如果允许X11转发并且sshd(8)代理的显示区被配置为
+
+	#      在含有通配符的地址(X11UseLocalhost)上监听。 
+
+	# 那么将可能有额外的信息被泄漏。由于使用X11转发的可能带来的风险，
+
+	#      此指令默认值为"no"。 
+
+	# 需要注意的是，禁止X11转发并不能禁止用户转发X11通信，
+
+	#      因为用户可以安装他们自己的转发器。 
+
+	# 如果启用了 UseLogin ，那么X11转发将被自动禁止。
+
+	X11Forwarding yes
+
+	#X11DisplayOffset 10
+
+	# 指定 sshd(8) X11 转发的第一个可用的显示区(display)数字。默认值是 10 。 
+
+	# 这个可以用于防止 sshd 占用了真实的 X11 服务器显示区，从而发生混淆。
+
+	#X11UseLocalhost yes
+
+	#  sshd(8) 是否应当将X11转发服务器绑定到本地loopback地址。默认值是"yes"。 
+
+	# sshd 默认将转发服务器绑定到本地loopback地址
+
+	#       并将 DISPLAY 环境变量的主机名部分设为"localhost"。 
+
+	# 这可以防止远程主机连接到 proxy display 。
+
+	#       不过某些老旧的X11客户端不能在此配置下正常工作。 
+
+	# 为了兼容这些老旧的X11客户端，你可以设为"no"。
+
+	# 12. 打印警告信息和上次登录信息
+
+	#PrintMotd yes
+
+	# 指定 sshd(8) 是否在每一次交互式登录时打印 /etc/motd 文件的内容。
+
+	#      默认值是"yes"。
+
+	#PrintLastLog yes
+
+	# 指定 sshd(8) 是否在每一次交互式登录时打印最后一位用户的登录时间。
+
+	#      默认值是"yes"。
+
+	# 13. 禁止使用Login命令
+
+	#UseLogin no
+
+	# 是否在交互式会话的登录过程中使用 login(1) 。默认值是"no"。 
+
+	# 如果开启此指令，那么 X11Forwarding 将会被禁止，
+
+	#     因为 login(1) 不知道如何处理 xauth(1) cookies 。 
+
+	# 需要注意的是，login(1) 是禁止用于远程执行命令的。 
+
+	# 如果指定了 UsePrivilegeSeparation ，那么它将在认证完成后被禁用。
+
+	# 14. 开启ssh创建非特权子进程处理接入请求
+
+	#UsePrivilegeSeparation yes
+
+	# 是否让 sshd(8) 通过创建非特权子进程处理接入请求的方法来进行权限分离。
+
+	#     默认值是"yes"。 
+
+	# 认证成功后，将以该认证用户的身份创建另一个子进程。 
+
+	# 这样做的目的是为了防止通过有缺陷的子进程提升权限，从而使系统更加安全。
+
+	# 15. 禁止导入变量
+
+	#PermitUserEnvironment no
+
+	# 指定是否允许 sshd(8) 处理 ~/.ssh/environment
+
+	#     以及 ~/.ssh/authorized_keys 中的 environment= 选项。 
+
+	# 默认值是"no"。
+
+	# 如果设为"yes"可能会导致用户有机会使用某些机制
+
+	#     (比如 LD_PRELOAD)绕过访问控制，造成安全漏洞。
+
+	# 16. 禁止连接ssh端口时,返回补丁版本信息
+
+	#ShowPatchLevel no
+
+	# ShowPatchLevel用于在连接ssh端口时,是否返回SSH的补丁版本信息
+
+	系统最小化安装
+
+	更改SSH远程端口号
+
+	更改SSH只监听内网IP
+
+	禁止root账号ssh登录,将常用的账户加入sudo组中
+
+	禁止使用密码登录
+
+	禁止无密码登录
+
+	显示上次登录信息
+
+	使用DNS反查客户端主机名(关闭ssh服务DNS反向解析)
+
+	加强密码复杂度
+
+	fail2ban监视系统日志，匹配日志的错误信息（正则式匹配）执行相应的屏蔽动作（一般情况下是防火墙），发送e-mail通知系统管理员
+
+	使用shell脚本来防止暴力破解ssh
+
+	使用xinetd服务
+
+	使用telnet服务
+
+	调整文件描述符数量,进程及文件的打开都会小号文件描述符数量
+
+	打开系统最大连接数上限
+
+	定期更新系统时间(使其和互联网(内网)时间同步)
+
+	配置yum更新源,从国内(企业内网)更新源下载安装软件包
+
+	关闭SELinux和iptables(在工作场景中,如果有外部IP一般要打开iptables,高并发高流量的服务可能无法开启)
+
+	定时自动清理邮件临时目录垃圾文件,防止磁盘的inode数被小文件占满(Centos6和Centos5要清除的目录不同)
+
+	精简并保留必要的开机自启动服务(如crond sshd network rsyslog sysstat)
+
+	Linux内核参数优化/etc/sysctl.conf 执行sysctl -p生效
+
+	更爱系统字符集为zh_CN.UTF-8,使其支持中文,防止出现乱码
+
+	命令权限最小化；
+
+	锁定关键系统文件,如:/etc/passwd  /etc/shadow /etc/group  /etc/gshadow  /etc/inittab 处理以上内容后把chattr lsattr改名(即转移走)
+
+	清空/etc/issue /etc/issue.net  取出系统及内核版本登录显示
+
+	清除多余的系统虚拟用户帐号
+
+	为grub引导菜单加密
+
+	禁止主机被ping
+
+	打补丁并升级有已知漏洞的软件
+
+	sshd_config
+
+
+	应用优化:
+	
+	1.清除垃圾应用（服务优化）
+
+
+	系统优化的方法，除了关闭防火墙，关闭 SElinux，去掉sshd配置里面的IP鉴权，加上 fstab 里面的 default,noatime 参数外， 还可以参考下面说明关闭一些不必要的系统服务
+	
+	使用 chkconfig --list | grep :on 可以查看到 （在RH系Linux 发行版里）
+
+	  
+
+	acpid
+	ACPI（全称 Advanced Configuration and Power Interface）服务是电源管理接口。建议所有的笔记本用户开启它。一些服务器可能不需要 acpi。支持的通用操作有：“电源开关“，”电池监视“，”笔记本 Lid 开关“，“笔记本显示屏亮度“，“休眠”， “挂机”，等等。
+
+	anacron, atd, crond
+	这几个调度程序有很小的差别。 建议开启 cron，如果你的电脑将长时间运行，那就更应该开启它。对于服务器，应该更深入了解以确定应该开启哪个调度程序。大多数情况下，笔记本/台式机应该关闭 atd 和 anacron。注意：一些任务的执行需要 anacron，比如：清理 /tmp 或 /var。
+
+	alsasound
+	Alsa声卡驱动守护程序。Alsa声卡驱动程序本来是为了 一种声卡Gravis UltraSound(GUS)而写的，该程序被证 明很优秀，于是作者就开始为一般的声卡写 驱动程序。 Alsa和OSS/Free 及OSS/Linux兼容，但是有自己的接 口，甚至比OSS优秀。
+
+	apmd
+	一些笔记本和旧的硬件使用 apmd。如果你的电脑支持 acpi，就应该关闭 apmd。如果支持 acpi，那么 apmd 的工作将会由 acpi 来完成。
+
+	arptables_jf
+	为arptables网络的用户控制过滤的守护进程。
+
+	arpwatch
+	记录日志并构建一个在LAN接口上看到的以太网地址和IP地址对数据库 。
+
+	atalk
+	AppleTalk网络守护进程。注意不要在后台运行该程序，该程序的数据结构必须在运行其他进程前先花一定时间初始化。
+
+	auditd
+	审核子系统可以被系统管理员用来监测系统调用和那些符合 CAPP 或其它审核要求的文件系统访问。它的主要内容包括：
+
+		· 默认情况下，审核在内核中被禁用。但是，当安装了 auditd 软件后，运行这个软件将会启动审核守护进程（auditd）。
+		· 当 auditd 运行的时候，审核信息会被发送到一个用户配置日志文件中（默认的文件是 /var/log/audit/audit.log）。如果 auditd 没有运行，审核信息会被发送到 syslog。这是通过默认的设置来把信息放入 /var/log/messages。如果审核子系统没有被启用，没有审核信息会被产生。
+		· 这些审核信息包括了 SELinux AVC 信息。以前，AVC 信息会被发送到 syslog，但现在会被审核守护进程发送到审核日志文件中。
+		· 要完全在内核中禁用审核，在启动的时候使用 audit=0 参数。您还需要使用 chkconfig auditd off 2345 来关闭 auditd。您可以在运行时使用 auditctl -e 0 来在内核中关闭审核。
+
+	审核守护进程（auditd）从内核的 audit netlink 接口获取审核事件数据。auditd 的配置会不尽相同，如输出文件配置和日志文件磁盘使用参数可以在 /etc/auditd.conf 文件中配置。请注意，如果您设置您的系统来进行 CAPP 风格的审核，您必须设置一个专用的磁盘分区来只供 audit 守护进程使用。这个分区应该挂载在 /var/log/audit。
+	系统管理员还可以使用 auditctl 工具程序来修改 auditd 守护进程运行时的审核参数、syscall 规则和文件系统的查看。它包括了一个 CAPP 配置样本，您可以把它拷贝到 /etc/audit.rules 来使它起作用。
+	审核日志数据可以通过 ausearch 工具程序来查看和搜索。
+
+	autofs
+	该服务自动挂载可移动存储器（比如 USB 硬盘）。如果你使用移动介质（比如移动硬盘，U 盘），建议启用这个服务。
+
+	avahi-daemon, avahi-dnsconfd
+	Avahi 是 zeroconf 协议的实现。它可以在没有 DNS 服务的局域网里发现基于 zeroconf 协议的设备和服务。它跟 mDNS 一样。除非你有兼容的设备或使用 zeroconf 协议的服务，否则应该关闭它。
+
+	bootparamd
+	引导参数服务器，为LAN上的无盘工作站提供引导所需的相关信息。
+
+	bluetooth, hcid, hidd, sdpd, dund, pand
+	蓝牙（Bluetooth）是给无线便携设备使用的（非 wifi, 802.11）。很多笔记本提供蓝牙支持。有蓝牙鼠标，蓝牙耳机和支持蓝牙的手机。很多人都没有蓝牙设备或蓝牙相关的服务，所以应该关闭它。其他蓝牙相关 的服务有：hcid 管理所有可见的蓝牙设备，hidd 对输入设备（键盘，鼠标）提供支持， dund 支持通过蓝牙拨号连接网络，pand 允许你通过蓝牙连接以太网。
+
+	capi
+	仅仅对使用 ISDN 设备的用户有用。大多数用户应该关闭它。
+
+	chargen
+	使用tcp协议的chargen server，chargen（Character Generator Protocol）是一种网络服务，主要功能是提供类似远程打字的功能。
+
+	chargen-udp
+	使用UDP协议的chargen server。
+
+	chargen-dgram
+	chargen-stream
+	conman
+
+	cpuspeed
+	该服务可以在运行时动态调节 CPU 的频率来节约能源（省电）。许多笔记本的 CPU 支持该特性，现在，越来越多的台式机也支持这个特性了。如果你的 CPU 是：Petium-M，Centrino，AMD PowerNow， Transmetta，Intel SpeedStep，Athlon-64，Athlon-X2，Intel Core 2 中的一款，就应该开启它。如果你想让你的 CPU 以固定频率运行的话就关闭它。
+
+	cupsd, cups-config-daemon, cups-lpd
+	打印机相关。
+
+	cvs
+	cvs 是一个版本控制系统。
+
+	daytime
+	使用TCP 协议的Daytime守护进程，该协议为客户机实现从远程服务器获取日期 和时间的功能。预设端口：13。
+	daytime-udp
+	使用UDP 协议的Daytime守护进程。
+
+	daytime-dgram
+	daytime-stream
+
+	dc_client, dc_server
+	磁盘缓存（Distcache）用于分布式的会话缓存。主要用在 SSL/TLS 服务器。它可以被 Apache 使用。大多数的台式机应该关闭它。
+
+	dhcdbd
+	这是一个让 DBUS 系统控制 DHCP 的接口。可以保留默认的关闭状态。
+
+	diskdump, netdump
+	磁盘转储（Diskdump）用来帮助调试内核崩溃。内核崩溃后它将保存一个 “dump“ 文件以供分析之用。网络转储（Netdump）的功能跟 Diskdump 差不多，只不过它可以通过网络来存储。除非你在诊断内核相关的问题，它们应该被关闭。
+
+	discard-dgram
+	discard-stream
+
+	dnsmasq
+	DNSmasq是一个轻巧的，容易使用的DNS服务工具，它可以应用在内部网和Internet连接的时候的IP地址NAT转换，也可以用做小型网络的DNS服务。
+
+	echo
+	服务器回显客户数据服务守护进程。
+	echo-udp
+	使用UDP协议的服务器回显客户数据服务守护进程。
+	echo-dgram
+	echo-stream
+
+	eklogin
+	接受rlogin会话鉴证和用kerberos5加密的一种服务的守护进程。
+
+	ekrb5-telnet
+
+	firstboot
+	该服务是 Fedora 安装过程特有的。它执行在安装之后的第一次启动时仅仅需要执行一次的特定任务。它可以被关闭。
+
+	functions
+
+	gated
+	网关路由守护进程。它支持各种路由协议，包括RIP版本1和2、DCN HELLO协议、 OSPF版本2以及EGP版本2到4。
+
+	gpm
+	终端鼠标指针支持（无图形界面）。如果你不使用文本终端（CTRL-ALT-F1, F2..），那就关闭它。不过，我在运行级别 3 开启它，在运行级别 5 关闭它。
+
+	gssftp
+	使用kerberos 5认证的ftp守护进程。
+
+	haldaemon
+	halt
+
+	hplip, hpiod, hpssd
+	HPLIP 服务在 Linux 系统上实现 HP 打印机支持，包括 Inkjet，DeskJet，OfficeJet，Photosmart，Business InkJet 和一部分 LaserJet 打印机。这是 HP 赞助的惠普 Linux 打印项目（HP Linux Printing Project）的产物。如果你有相兼容的打印机，那就启用它。
+
+	hsqldb
+	一个java的关系型数据库守护进程，得名于Hypersonic SQL，但这个项目已经没有再继续了。
+
+	httpd
+	Web服务器Apache守护进程，可用来提供HTML文件以 及CGI动态内容服务。
+
+	innd
+	Usenet新闻服务器守护进程。
+
+	iiim
+	中文输入法服务器守护进程。
+
+	inetd
+	因特网操作守护程序。监控网络对各种它管理的服务的需求，并在必要的时候启动相应的服务程序。在Redhat 和Mandrake linux中被xinetd代替。Debian, Slackware, SuSE仍然使用。
+
+	ip6tables
+	如果你不知道你是否在使用 IPv6，大部分情况下说明你没有使用。该服务是用于 IPv6 的软件防火墙。大多数用户都应该关闭它。
+
+	ipmi
+	iptables
+	它是 Linux 标准的防火墙（软件防火墙）。如果你直接连接到互联网（如，cable，DSL，T1），建议开启它。如果你使用硬件防火墙（比如：D-Link，Netgear，Linksys 等等），可以关闭它。强烈建议开启它。
+
+	irda, irattach
+	IrDA 提供红外线设备（笔记本，PDA’s，手机，计算器等等）间的通讯支持。大多数用户应该关闭它。
+
+	irqbalance
+	在多处理器系统中，启用该服务可以提高系统性能。大多数人不使用多处理器系统，所以关闭它。但是我不知道它作用于多核 CPU’s 或 超线程 CPU’s 系统的效果。在单 CPU 系统中关闭它应该不会出现问题。
+
+	isdn
+	这是一种互联网的接入方式。除非你使用 ISDN 猫来上网，否则你应该关闭它。
+
+	keytable
+	该进程的功能是转载在/etc/sysconfig/keyboards里定义的键盘映射表，该表可以通过kbdconfig工具进行选择。您应该使该程序处于激活状态。
+
+	kdump
+
+	klogin
+	远程登陆守护进程。
+
+	krb5-telnet
+	使用kerberos 5认证的telnet守护进程。
+
+	kshell
+	kshell守护进程。
+
+	killall
+	krb524
+	kudzu
+	该服务进行硬件探测，并进行配置。如果更换硬件或需要探测硬件更动，开启它。但是绝大部分的台式机和服务器都可以关闭它，仅仅在需要时启动。
+
+	ldap
+	ldap（Lightweight Directory Access Protocol）目录访问协议服务器守护进程。
+
+	libvirtd
+
+	lm_sensors
+	该服务可以探测主板感应器件的值或者特定硬件的状态（一般用于笔记本电脑）。你可以通过它来查看电脑的实时状态，了解电脑的健康状况。它在 GKrellM 用户中比较流行。如果没有特殊理由，建议关闭它。
+
+	lvm2-monitor
+	mcstrans
+	SELinux转换服务，如果你使用 SELinux 就开启它，但你也可以关闭。
+
+	mdmonitor
+	该服务用来监测 Software RAID 或 LVM 的信息。它不是一个关键性的服务，可以关闭它。
+
+	mdmpd
+	该服务用来监测 Multi-Path 设备（该类型的存储设备能被一种以上的控制器或方法访问）。它应该被关闭。
+
+	messagebus
+	这是 Linux 的 IPC（Interprocess Communication，进程间通讯）服务。确切地说，它与 DBUS 交互，是重要的系统服务。强烈建议开启它。
+
+	multipathd, microcode_ctl
+	可编码以及发送新的微代码到内核以更新Intel IA32系列处理器守护进程。
+
+	mysqld
+	一个快速高效可靠的轻型SQL数据库引擎守护进程。
+
+	named
+	DNS（BIND）服务器守护进程。
+
+	netconsole
+
+	netfs
+	该服务用于在系统启动时自动挂载网络中的共享文件空间，比如：NFS，Samba 等等。如果你连接到局域网中的其它服务器并进行文件共享，就开启它。大多数台式机和笔记本用户应该关闭它。
+
+	netplugd, ifplugd
+	Netplugd 用于监测网络接口并在接口状态改变时执行指定命令。建议保留它的默认关闭状态。
+
+	network
+	激活/关闭启动时的各个网络接口守护进程。
+
+	nfs, nfslock
+	这是用于 Unix/Linux/BSD 系列操作系统的标准文件共享方式。除非你需要以这种方式共享数据，否则关闭它。
+
+	nscd
+	服务名缓存进程，它为NIS和LDAP等服务提供更快的验证，如果你运行这些服务，那你应该开启它。
+
+	ntpd
+	该服务通过互联网自动更新系统时间。如果你能永久保持互联网连接，建议开启它，但不是必须的。
+
+	pcscd
+	该服务提供智能卡（和嵌入在信用卡，识别卡里的小芯片一样大小）和智能卡读卡器支持。如果你没有读卡器设备，就关闭它。
+
+	pcmcia
+	主要用于支持笔记本电脑接口守护进程。
+
+	portmap
+	该服务是 NFS（文件共享）和 NIS（验证）的补充。除非你使用 NFS 或 NIS 服务，否则关闭它。
+
+	postgresql
+	PostgreSQL 关系数据库引擎。
+
+	pppoe
+	ADSL连接守护进程。
+
+	proftpd
+	proftpd 是Unix下的一个配置灵活的ftp服务器的守护程序。
+
+	psacct
+	该守护进程包括几个工具用来监控进程活动的工具，包括ac,lastcomm, accton和sa。
+
+	random
+	保存和恢复系统的高质量随机数生成器，这些随机数是系统一些随机行为提供的。
+
+	rawdevices
+	在使用集群文件系统时用于加载raw设备的守护进程。
+
+	rdisc
+	readahead_early, readahead_later
+	该服务通过预先加载特定的应用程序到内存中以提供性能。如果你想程序启动更快，就开启它。
+
+	restorecond
+	用于给 SELinux 监测和重新加载正确的文件上下文（file contexts）。它不是必须的，但如果你使用 SELinux 的话强烈建议开启它。
+
+	rhnsd
+	Red Hat 网络服务守护进程。通知官方的安全信息以及为系统打补丁。
+
+	routed
+	该守护程序支持RIP协议的自动IP路由表维护。RIP主要 使用在小型网络上，大一点的网络就需要复杂一点的协议。
+
+	rpcgssd, rpcidmapd, rpcsvcgssd
+	用于 NFS v4。除非你需要或使用 NFS v4，否则关闭它。
+
+	rsync
+	remote sync远程数据备份守护进程。
+
+	rsh
+	远程主机上启动一个shell，并执行用户命令。
+
+	rwhod
+	允许远程用户获得运行rwho守护程序的机器上所有已登录用户的列表。
+
+	rstatd
+	一个为LAN上的其它机器收集和提供系统信息的守候进程。
+
+	ruserd
+	远程用户定位服务，这是一个基于RPC的服务，它提供关于当前记录到LAN上一个机器日志中的用户信息。
+
+	rwalld
+	激活rpc.rwall服务进程，这是一项基于RPC的服务，允许用户给每个注册到LAN机器上的其他终端写消息。
+
+	rwhod：
+
+	激活rwhod服务进程，它支持LAN的rwho和ruptime服务。
+
+	saslauthd
+	使用SASL的认证守护进程。
+
+	sendmail
+	除非你管理一个邮件服务器或你想 在局域网内传递或支持一个共享的 IMAP 或 POP3 服务。大多数人不需要一个邮件传输代理。如果你通过网页（hotmail/yahoo/gmail）或使用邮件收发程序（比如：Thunderbird， Kmail，Evolution 等等）收发邮件。你应该关闭它。
+
+	setroubleshoot
+	查看selinux日志的程序
+
+	squid
+	代理服务器squid守护进程。
+
+	smartd
+	SMART Disk Monitoring 服务用于监测并预测磁盘失败或磁盘问题（前提：磁盘必须支持 SMART）。大多数的桌面用户不需要该服务，但建议开启它，特别是服务器。
+
+	smb
+	SAMBA 服务是在 Linux 和 Windows 之间共享文件必须的服务。如果有 Windows 用户需要访问 Linux 上的文件，就启用它。
+
+	snmpd
+	本地简单网络管理守护进程。
+
+	sshd
+	SSH 允许其他用户登录到你的系统并执行程序，该用户可以和你同一网络，也可以是远程用户。开启它存在潜在的安全隐患。如果你不需要从其它机器或不需要从远程登录，就应该关闭它。
+
+	syslog
+	tcpmux-server
+	tftp
+
+	time
+	该守护进程从远程主机获取时间和日期，采用TCP协议。
+
+	time-udp
+	该守护进程从远程主机获取时间和日期，采用UDP协议。
+	time-dgram
+	time-stream
+
+	tux
+	在Linux内核中运行apache服务器的守护进程。
+
+	vsftpd
+	vsftpd服务器的守护进程
+
+	vmware-tools
+	vmware-tools，虚拟机中装了vmware-tools包之后才会有的。
+
+	vncserver
+	VNC （Virtual Network Computing，虚拟网络计算），它提供了一种在本地系统上显示远程计算机整个”桌面”的轻量型协议。
+
+	winbind
+	Winbind 是一款 Samba 组件，在 CentOS 系统下，他被包含在了 samba-common 包中。 Winbind 在Linux上实现了微软的RPC调用、可插式验证模块和名字服务切换，通过 samba 接口与 Windows 域控获得联系，可以使NT域用户能在Linux主机上以Linux用户身份进行操作。通过设定 Linux 服务器的 nss 配置，我们可以让系统通过 Winbind 程序来解析用户信息。
+
+	wpa_supplicant
+	无线网卡上网服务
+
+	xend, xendomains
+	XEN虚拟服务相关
+
+	xfs
+	X Window字型服务器守护进程，为本地和远程X服务器提供字型集。
+
+	xinetd
+	（该服务默认可能不被安装）它是一个特殊的服务。它可以根据特定端口收到的请求启动多个服务。比如：典型的 telnet 程序连接到 23 号端口。如果有 telent 请求在 23 号端口被 xinetd 探测到，那 xinetd 将启动 telnetd 服务来响应该请求。为了使用方便，可以开启它。运行 chkconfig –list， 通过检查 xinetd 相关的输出可以知道有哪些服务被 xinetd 管理。
+
+	ypbind
+	为NIS（网络信息系统）客户机激活ypbind服务进程 。
+
+	yppasswdd
+	NIS口令服务器守护进程。
+
+	ypserv
+	NIS主服务器守护进程。
+
+	yum, yum-updatesd
+	RPM操作系统自动升级和软件包管理守护进程。
+
+	ConsoleKit
+	这个主要是 Gnome 使用的用于 Fedora - Fast User Switching ，主要用于自动加载 device 和 Power Management. 建议 Disable
+	NetworkManager, NetworkManagerDispatcher
+	主要用于笔记本的有线网络和无线网络之间的切换，有些 DHCP 用户会用到 . 建议 Disable
+	
+	acpid
+	高级电源管理，在 Fedora 7 中默认安装的，如果需要可以安装
+	
+	anacron, atd, cron
+	Linux 里面的计划任务，cron 建议打开，其它两项关闭
+	
+	auditd
+	这个记录 kernel 的审计情况，相当于另外的一个 loggin 服务，用命令 auditctl 查看文件的变化情况，普通用户用不上可以关闭
+	
+	autofs
+	自动加裁文件系统，如果你用的移动设备建议打开，不然就关掉咯
+	
+	avahi-daemon, avahi-dnsconfd
+	相当于 mDNS 的一个软件，我也不知道干什么用的，建议关闭
+	
+	bluetooth, hcid, hidd, sdpd, dund, pand
+	用于蓝牙设备的 deamon ，没有的可以关闭
+	
+	btseed, bttrack
+	和 BitTorrent 相关的服务，建议关闭
+	
+	capi
+	与ISDN相关的服务，一般用户都可以关闭
+	
+	cpuspeed
+	控制CPU的频率用于节省电源， Pentium-M, Centrino, AMD PowerNow, Transmetta, Intel SpeedStep, Athlon-64, Athlon-X2, Intel Core
+	
+
+
+	2 支持，如果你CPU不支持或者，想CPU全速运行都可以关掉它
+	
+	cupsd, cups-config-daemon
+	以打印机相关的服务，有打印机可以打开
+	
+	dc_client, dc_server
+	主要用以 SSL/TLS 服务，如 Apache Server，不使用就可以关闭
+	
+	dhcdbd
+	DHCP相关服务，使用DHCP的人打开，用固定IP的关闭就行了
+	
+	firstboot
+	用于第一启动相关的设置，关闭
+	
+	gpm
+	对鼠标的支持，如果你用 console 要以打开，常用 x-server 就关闭
+	
+	haldaemon
+	HAL (Hardware Abstraction Layer) 这个必须打开
+	
+	hplip, hpiod, hpssd
+	HP打印机支持程序，不使就HP打印机的就关闭吧
+	
+	httpd
+	Apache HTTP Web Server
+	
+	iptables
+	Linux 下的防火墙，好东东啊
+	
+	ip6tables
+	IPv6 的防火墙，大部分用户可以半闭了
+	
+	irda, irattach
+	IrDA 支持服务，大部分用户都不会用上
+	
+	irqbalance
+	对多核多CPU的用户的服务，用VMware的没必要打开了
+	
+	isdn
+	ISDN用户用的，关闭
+	
+	kudzu
+	如果你不是经常的更换硬件就关闭它
+	
+	lirc
+	红外遥控支持，没什么用处
+	
+	lisa
+	和网上邻居的功能很像，如果用Samba 或 NFS 可以打开
+	
+	lm_sensors
+	主板测试PC健康用的服务，如CPU，硬盘温度之些的，不用可以关掉
+	
+	mcstrans
+	用于查看 context 的，用 SELinux 的可打开
+	
+	mdmonitor
+	用于监视软 RAID 和 LVM 信息，你也可以关掉
+	
+	messagebus
+	IPC (Interprocess Communication) 进程间通信服务，一个重要的服务，必须打开
+	
+	nasd
+	声音支持，用于X Windows，不用的就半掉
+	
+	netconsole
+	初始化网络控制台登陆，关闭
+	
+	netfs
+	用于自动加载NFS，Samba的服务，不用可以关掉
+	
+	netplugd
+	监测网络接口用的，普通用户关掉
+	
+	nfs, nfslock
+	用于 Unix/Linux/BSD 之间的文件共享，不用就半掉
+	
+	nmbd
+	Samba的一个服务，用于NETBeui名称解析用的
+	
+	nscd
+	用于缓存密码的，没什么用
+	
+	ntpd
+	NTP服务
+	
+	pcscd
+	用于对子 Smart Cards 的支持，不用就半掉
+	
+	readahead_early, readahead_later
+	优化程序的启动速度用的，果如你想启动的快些就打开
+	
+	restorecond
+	用于监控文件用的，如果你用 SELinux 就打开它
+	
+	rpcbind
+	RPC服务支持 (像 NFS or NIS). 如果没有服务依赖它可以关掉
+	
+	rpcgssd, rpcidmapd, rpcsvcgssd
+	用于 NFS v4. 除非你使用 NFS v4, 关掉
+	
+	sendmail
+	Linux 下的邮件服务器
+	
+	setroubleshoot
+	这个程序提供信息给 setroubleshoot Browser，如果你用 SELinux 可以打开它
+	
+	smartd
+	SMART，用于监测硬盘的，VMware用户关掉
+	
+	smb
+	SAMBA 与Windows共享文件用
+	
+	smolt
+	用于提供每月的一些统计表，不知什么用，关掉
+	
+	sshd
+	用于SSH连接用的
+	
+	yum-updatesd
+	用于在线自动升级的，建议打开
+
+
+
+		安全扫描:
+
+			4.漏洞扫描（Nmap）
+
+						安装nmap后(ubuntu通过apt-get install nmap安装)，运行下列命令即可
+
+	nmap -p0-65535 目标ip地址
+
+	常用的扫描类型：
+
+	1、-sP(ping的方式扫描，检查主机在线与否，不发送任何报文到目的主机,想知道目标主机是否运行，而不想进行其它扫描，这扫描方式很常用)
+	2、-sL（仅仅列网段内出主机的状态、端口等信息，查询端口的话用 -p port,port1……）
+	3、 -PS/PA/PU [portlist]						
+	（根据给定的端口用TCP或UDP报文探测：对于root用户，这个选项让nmap使用SYN包而不是ACK包来对目标主机进行扫描。如果主机正在运行就返回一个RST包(或者一个SYNACK包)）
+	4、-sS(TCP同步扫描(TCP SYN)：发出一个TCP同步包(SYN)，然后等待回对方应)
+	5、 -sF -sF -sN（秘密FIN数据包扫描、圣诞树 (Xmas Tree)、空(Null)扫描模式使用-sF、-sX或者-sN扫描显示所有的端口都是关闭的，而使用SYN扫 描显示有打开的端口，你可以确定目标主机可能运行的是Windwos系统）
+	6、-sU（UDP扫描：nmap首先向目标主机的每个端口发出一个0字节的UDP包，如果我们收到端口不可达的ICMP消息，端口就是关闭的，否则我们就假设它是打开的）
+	7、-P0 (No ping)（这个选项跳过Nmap扫描）
+	8、-PE/PP/PM
+	扫描类型的控制
+	1、sW （对滑动窗口的扫描）
+	2、-sR（RPC扫描）
+	3、 -PE; -PP; -PM (ICMP 类型的ping)
+	4、-PR (ARP 类型的ping-n (无 DNS 解析)
+	5、-R (为所有的目标做DNS解析)
+	6、-sV(对服务版本的检测)
+	常用的对主机的操作
+	1、-A或者-O(对操作系统的检测)
+	2、-v(增加信息的详尽程度)
+	3、-p（ports的范围）
+
+	实例：
+
+	nmap -O -p 0-65535 -v IP地址  （扫描整个服务器端口）
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
